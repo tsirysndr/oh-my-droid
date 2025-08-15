@@ -261,14 +261,14 @@ fn setup_mise(map: &HashMap<String, String>) -> Result<(), Error> {
         "bash",
         &[
             "-c",
-            "sed -i '/mise/d' ~/.bashrc || echo 'No existing mise line found in .bashrc'",
+            "sed -i '/mise /d' ~/.bashrc || echo 'No existing mise line found in .bashrc'",
         ],
     )?;
     run_command(
         "bash",
         &[
             "-c",
-            "echo '\neval $(mise activate bash)' | tee -a ~/.bashrc",
+            "echo '\neval \"$(mise activate bash)\"' | tee -a ~/.bashrc",
         ],
     )?;
 
@@ -286,7 +286,7 @@ fn enable_blesh(enabled: bool) -> Result<(), Error> {
         run_command_without_local_path(
             "bash",
             &[
-                "-c", "rm -rf ~/local/bin/gettext* &&git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git",
+                "-c", "rm -rf ~/.local/bin/gettext* &&git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git",
             ],
         )
         .context("Failed to clone ble.sh repository")?;
