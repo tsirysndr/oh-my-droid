@@ -1,4 +1,5 @@
 # oh-my-droid
+[![ci](https://github.com/tsirysndr/oh-my-droid/actions/workflows/ci.yml/badge.svg)](https://github.com/tsirysndr/oh-my-droid/actions/workflows/ci.yml)
 
 Turn a fresh Android +15 Linux Terminal into a fully-configured, beautiful, and modern web development system by running a single command.
 
