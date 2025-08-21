@@ -103,6 +103,7 @@ impl Default for Configuration {
                     "httpie",
                     "code",
                     "screenfetch",
+                    "stow",
                 ]
                 .into_iter()
                 .map(String::from)
