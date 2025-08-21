@@ -17,6 +17,7 @@ pub enum SetupStep<'a> {
     OhMyPosh(&'a str),
     Zoxide(bool),
     Alias(&'a HashMap<String, String>),
+    Ssh,
     Paths,
 }
 
@@ -33,6 +34,7 @@ impl<'a> SetupStep<'a> {
             SetupStep::OhMyPosh(theme) => setup_oh_my_posh(theme),
             SetupStep::Zoxide(enabled) => enable_zoxide(*enabled),
             SetupStep::Alias(map) => setup_alias(map),
+            SetupStep::Ssh => setup_ssh(),
             SetupStep::Paths => setup_paths(),
         }
     }
@@ -162,6 +164,14 @@ impl<'a> SetupStep<'a> {
                     "  - ~/.local/bin".green()
                 )
             }
+            SetupStep::Ssh => {
+                format!(
+                    "{} {}\n{}",
+                    "SSH".blue().bold(),
+                    "(Setup SSH keys and configuration)".italic(),
+                    "  - Generate SSH key pair".green()
+                )
+            }
         }
     }
 }
@@ -286,7 +296,7 @@ fn enable_blesh(enabled: bool) -> Result<(), Error> {
         run_command_without_local_path(
             "bash",
             &[
-                "-c", "rm -rf ~/.local/bin/gettext* &&git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git",
+                "-c", "rm -rf ~/.local/bin/gettext* && git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git",
             ],
         )
         .context("Failed to clone ble.sh repository")?;
@@ -321,12 +331,47 @@ fn enable_zoxide(enabled: bool) -> Result<(), Error> {
 }
 
 fn setup_nix(_map: &HashMap<String, String>) -> Result<(), Error> {
-    // nix logic here
+    run_command(
+        "bash",
+        &[
+            "-c",
+            "type nix || curl -fsSL https://install.determinate.systems/nix | sh -s -- install --determinate",
+        ],
+    )
+    .context("Failed to install nix")?;
     Ok(())
 }
 
-fn setup_stow(_map: &HashMap<String, String>) -> Result<(), Error> {
-    // stow logic here
+fn setup_stow(map: &HashMap<String, String>) -> Result<(), Error> {
+    if map.is_empty() {
+        return Ok(());
+    }
+
+    let repo = map
+        .get("git")
+        .ok_or_else(|| Error::msg("No repo specified for stow"))?;
+
+    let repo = if repo.starts_with("github:") {
+        repo.replace("github:", "https://github.com/")
+    } else if repo.starts_with("tangled:") {
+        repo.replace("tangled:", "https://tangled.sh/")
+    } else {
+        repo.to_string()
+    };
+
+    let home = dirs::home_dir().ok_or_else(|| Error::msg("Failed to get home directory"))?;
+
+    if !Path::new(&home.join(".dotfiles")).exists() {
+        run_command("bash", &["-c", &format!("git clone {} ~/.dotfiles", repo)])
+            .context("Failed to clone dotfiles repository")?;
+    } else {
+        run_command("bash", &["-c", "git -C ~/.dotfiles pull"])
+            .context("Failed to update dotfiles repository")?;
+    }
+
+    run_command("bash", &["-c", "stow -d ~/.dotfiles -t ~ -- ."])
+        .context("Failed to stow dotfiles")?;
+
     Ok(())
 }
 
@@ -376,6 +421,25 @@ fn setup_paths() -> Result<(), Error> {
         &["-c", "grep -q 'export PATH=\"$HOME/.local/bin:$PATH\"' ~/.bashrc || echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc"],
     )
     .context("Failed to add ~/.local/bin to PATH in .bashrc")?;
+
+    Ok(())
+}
+
+fn setup_ssh() -> Result<(), Error> {
+    let home = dirs::home_dir().ok_or_else(|| Error::msg("Failed to get home directory"))?;
+    let ssh_dir = home.join(".ssh");
+    if !ssh_dir.exists() {
+        std::fs::create_dir_all(&ssh_dir).context("Failed to create ~/.ssh directory")?;
+        run_command("chmod", &["700", ssh_dir.to_str().unwrap()])
+            .context("Failed to set permissions for ~/.ssh directory")?;
+    }
+
+    if ssh_dir.join("id_ed25519").exists() {
+        println!("SSH key already exists. Skipping key generation.");
+        return Ok(());
+    }
+
+    run_command("ssh-keygen", &["-t", "ed25519"]).context("Failed to generate SSH key")?;
 
     Ok(())
 }

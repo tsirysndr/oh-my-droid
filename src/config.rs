@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Error, Result};
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, process::Command};
 
 use crate::apply::SetupStep;
 
@@ -48,6 +48,26 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn setup_environment(&self, dry_run: bool) -> Result<()> {
+        let output = Command::new("df")
+            .args(&["-BG", "--output=size", "/"])
+            .output()
+            .context("Failed to check disk size")?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let disk_size = stdout
+            .lines()
+            .nth(1)
+            .unwrap_or("0")
+            .replace("G", "")
+            .trim()
+            .parse::<u64>()
+            .unwrap_or(0);
+
+        if disk_size < 7 {
+            println!("Disk size: {}GB", disk_size);
+            return Err(Error::msg("Insufficient disk size: >= 7GB required"));
+        }
+
         let steps: Vec<SetupStep> = vec![
             Some(SetupStep::Paths),
             self.apt_get.as_deref().map(SetupStep::AptGet),
@@ -62,6 +82,7 @@ impl Configuration {
                 .as_ref()
                 .map(|omp| SetupStep::OhMyPosh(omp.theme.as_deref().unwrap_or("tokyonight_storm"))),
             self.alias.as_ref().map(SetupStep::Alias),
+            Some(SetupStep::Ssh),
         ]
         .into_iter()
         .flatten()
@@ -78,6 +99,12 @@ impl Configuration {
             for step in steps {
                 step.run()?;
             }
+            println!("{}", "Environment setup completed successfully 🎉".green());
+            println!("You can now open a new terminal to see the changes.");
+            println!(
+                "Or run {} to apply the changes to the current terminal session.",
+                "source ~/.bashrc".green()
+            );
         }
         Ok(())
     }
@@ -134,7 +161,10 @@ impl Default for Configuration {
             blesh: Some(true),
             zoxide: Some(true),
             nix: None,
-            stow: None,
+            stow: Some(HashMap::from([(
+                "git".into(),
+                "github:tsirysndr/android-dotfiles".into(),
+            )])),
             oh_my_posh: Some(OhMyPosh {
                 theme: Some("tokyonight_storm".into()),
             }),
