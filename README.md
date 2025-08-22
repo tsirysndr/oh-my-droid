@@ -15,11 +15,11 @@ Turn a fresh Android 15+ Linux Terminal into a fully-configured, beautiful, and 
 - [Stow](https://www.gnu.org/software/stow) integration for managing dotfiles
 - [Nix](https://github.com/NixOS/nix) package manager
 - SSH support for secure remote access
+- [Tailscale](https://tailscale.com/) integration for secure access to your devices
 - Pre-installed [VS Code](https://code.visualstudio.com/)
 - Pre-installed [NeoVim](https://neovim.io/)
 - [Oh My Posh](https://ohmyposh.dev/) integration for a beautiful prompt
 - Alias setup for ls: `alias ls='eza -lh'`
-
 
 ![Preview](./preview.png)
 
