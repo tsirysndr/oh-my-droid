@@ -13,19 +13,17 @@ pub fn setup(dry_run: bool, no_confirm: bool) -> Result<(), Error> {
         cfg = toml::from_str(&toml_str)?;
     }
 
-    let mut diffs = Vec::new();
+    let home_dir =
+        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Failed to get home directory"))?;
+    let diffs = match Path::new(&home_dir).join(".oh-my-droid/lock.toml").exists() {
+        true => {
+            let old_cfg = Configuration::load_lock_file()?;
+            compare_configurations(&old_cfg, &cfg)
+        }
+        false => compare_configurations(&Configuration::empty(), &cfg),
+    };
 
     if !no_confirm && !dry_run {
-        let home_dir =
-            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Failed to get home directory"))?;
-        diffs = match Path::new(&home_dir).join(".oh-my-droid/lock.toml").exists() {
-            true => {
-                let old_cfg = Configuration::load_lock_file()?;
-                compare_configurations(&old_cfg, &cfg)
-            }
-            false => compare_configurations(&Configuration::empty(), &cfg),
-        };
-
         if diffs.is_empty() {
             println!(
                 "{}",
