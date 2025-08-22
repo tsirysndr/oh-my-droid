@@ -3,6 +3,8 @@
 
 Turn a fresh Android 15+ Linux Terminal into a fully-configured, beautiful, and modern web development system by running a single command.
 
+![Preview](./terminal.png)
+
 ## Features
 - Easy installation of essential development tools
 - Pre-configured environment for web development
