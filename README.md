@@ -21,6 +21,7 @@ Turn a fresh Android 15+ Linux Terminal into a fully-configured, beautiful, and 
 - Pre-installed [VS Code](https://code.visualstudio.com/)
 - Pre-installed [NeoVim](https://neovim.io/)
 - [Oh My Posh](https://ohmyposh.dev/) integration for a beautiful prompt
+- [Oh My Tmux!](https://github.com/gpakosz/.tmux) integration for a better tmux experience
 - Alias setup for ls: `alias ls='eza -lh'`
 
 ![Preview](./preview.png)
