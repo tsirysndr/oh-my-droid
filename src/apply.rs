@@ -3,7 +3,10 @@ use std::{collections::HashMap, path::Path};
 use anyhow::{Context, Error};
 use owo_colors::OwoColorize;
 
-use crate::command::{run_command, run_command_without_local_path};
+use crate::{
+    command::{run_command, run_command_without_local_path},
+    config::SshConfig,
+};
 
 #[derive(Debug)]
 pub enum SetupStep<'a> {
@@ -17,8 +20,9 @@ pub enum SetupStep<'a> {
     OhMyPosh(&'a str),
     Zoxide(bool),
     Alias(&'a HashMap<String, String>),
-    Ssh,
+    Ssh(&'a SshConfig),
     Paths,
+    Tailscale(bool),
 }
 
 impl<'a> SetupStep<'a> {
@@ -34,8 +38,9 @@ impl<'a> SetupStep<'a> {
             SetupStep::OhMyPosh(theme) => setup_oh_my_posh(theme),
             SetupStep::Zoxide(enabled) => enable_zoxide(*enabled),
             SetupStep::Alias(map) => setup_alias(map),
-            SetupStep::Ssh => setup_ssh(),
+            SetupStep::Ssh(config) => setup_ssh(config),
             SetupStep::Paths => setup_paths(),
+            SetupStep::Tailscale(enabled) => enable_tailscale(*enabled),
         }
     }
 
@@ -164,12 +169,30 @@ impl<'a> SetupStep<'a> {
                     "  - ~/.local/bin".green()
                 )
             }
-            SetupStep::Ssh => {
+            SetupStep::Ssh(config) => {
                 format!(
-                    "{} {}\n{}",
+                    "{} {}\n  - Port: {}\n  - Authorized Keys: {}",
                     "SSH".blue().bold(),
                     "(Setup SSH keys and configuration)".italic(),
-                    "  - Generate SSH key pair".green()
+                    config.port.unwrap_or(0).to_string().green(),
+                    config
+                        .authorized_keys
+                        .as_ref()
+                        .map(|keys| {
+                            keys.iter()
+                                .map(|key| format!("    - {}", key.green()))
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        })
+                        .unwrap_or_else(|| "    - None".into())
+                )
+            }
+            SetupStep::Tailscale(enabled) => {
+                format!(
+                    "{} {}\n  - Enabled: {}",
+                    "Tailscale".blue().bold(),
+                    "(Install and configure Tailscale VPN)".italic(),
+                    enabled.to_string().green()
                 )
             }
         }
@@ -425,13 +448,37 @@ fn setup_paths() -> Result<(), Error> {
     Ok(())
 }
 
-fn setup_ssh() -> Result<(), Error> {
+fn setup_ssh(config: &SshConfig) -> Result<(), Error> {
     let home = dirs::home_dir().ok_or_else(|| Error::msg("Failed to get home directory"))?;
     let ssh_dir = home.join(".ssh");
     if !ssh_dir.exists() {
         std::fs::create_dir_all(&ssh_dir).context("Failed to create ~/.ssh directory")?;
         run_command("chmod", &["700", ssh_dir.to_str().unwrap()])
             .context("Failed to set permissions for ~/.ssh directory")?;
+    }
+
+    if let Some(port) = config.port {
+        run_command(
+            "bash",
+            &[
+                "-c",
+                &format!(
+                    "sudo sed -i -E '/^[#[:space:]]*Port[[:space:]]+[0-9]+/d' /etc/ssh/sshd_config && echo \"Port {port}\" | sudo tee -a /etc/ssh/sshd_config >/dev/null && sudo sshd -t"
+                ),
+            ],
+        )
+        .context("Failed to update SSH config with port")?;
+        run_command("sudo", &["systemctl", "reload", "ssh"])
+            .context("Failed to restart SSH service")?;
+    }
+
+    if let Some(authorized_keys) = &config.authorized_keys {
+        for key in authorized_keys {
+            run_command(
+                "bash",
+                &["-c", &format!("echo '{}' > ~/.ssh/authorized_keys", key)],
+            )?;
+        }
     }
 
     if ssh_dir.join("id_ed25519").exists() {
@@ -441,5 +488,19 @@ fn setup_ssh() -> Result<(), Error> {
 
     run_command("ssh-keygen", &["-t", "ed25519"]).context("Failed to generate SSH key")?;
 
+    Ok(())
+}
+
+fn enable_tailscale(enabled: bool) -> Result<(), Error> {
+    if enabled {
+        run_command(
+            "bash",
+            &["-c", "curl -fsSL https://tailscale.com/install.sh | sh"],
+        )
+        .context("Failed to install Tailscale")?;
+        run_command("bash", &["-c", "sudo tailscale up"]).context("Failed to enable Tailscale")?;
+        run_command("bash", &["-c", "sudo tailscale ip"])
+            .context("Failed to check Tailscale status")?;
+    }
     Ok(())
 }

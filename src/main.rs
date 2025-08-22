@@ -41,7 +41,8 @@ fn cli() -> Command {
             Command::new("setup")
                 .about("Set up the environment with the default configuration.")
                 .arg(arg!(-d --"dry-run" "Simulate the setup process without making any changes."))
-                .arg(arg!(-y --"yes" "Skip confirmation prompts during setup.")),
+                .arg(arg!(-y --"yes" "Skip confirmation prompts during setup."))
+                .alias("apply"),
         )
         .arg(arg!(-d --"dry-run" "Simulate the setup process without making any changes."))
         .arg(arg!(-y --"yes" "Skip confirmation prompts during setup."))
