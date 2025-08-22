@@ -85,3 +85,7 @@ authorized_keys = []
 ```
 
 You can customize it and run `oh-my-droid apply` to apply the changes.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
