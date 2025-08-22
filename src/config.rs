@@ -59,6 +59,9 @@ pub struct Configuration {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssh: Option<SshConfig>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub neofetch: Option<bool>,
 }
 
 impl Configuration {
@@ -99,6 +102,7 @@ impl Configuration {
             self.alias.as_ref().map(SetupStep::Alias),
             self.ssh.as_ref().map(SetupStep::Ssh),
             self.tailscale.map(SetupStep::Tailscale),
+            self.neofetch.map(SetupStep::Neofetch),
         ]
         .into_iter()
         .flatten()
@@ -145,7 +149,7 @@ impl Default for Configuration {
                     "openssh-client",
                     "httpie",
                     "code",
-                    "screenfetch",
+                    "neofetch",
                     "stow",
                 ]
                 .into_iter()
@@ -190,6 +194,7 @@ impl Default for Configuration {
                 port: Some(8022),
                 authorized_keys: Some(vec![]),
             }),
+            neofetch: Some(true),
         }
     }
 }

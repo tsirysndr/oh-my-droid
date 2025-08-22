@@ -23,6 +23,7 @@ pub enum SetupStep<'a> {
     Ssh(&'a SshConfig),
     Paths,
     Tailscale(bool),
+    Neofetch(bool),
 }
 
 impl<'a> SetupStep<'a> {
@@ -41,6 +42,7 @@ impl<'a> SetupStep<'a> {
             SetupStep::Ssh(config) => setup_ssh(config),
             SetupStep::Paths => setup_paths(),
             SetupStep::Tailscale(enabled) => enable_tailscale(*enabled),
+            SetupStep::Neofetch(enabled) => enable_neofetch(*enabled),
         }
     }
 
@@ -192,6 +194,14 @@ impl<'a> SetupStep<'a> {
                     "{} {}\n  - Enabled: {}",
                     "Tailscale".blue().bold(),
                     "(Install and configure Tailscale VPN)".italic(),
+                    enabled.to_string().green()
+                )
+            }
+            SetupStep::Neofetch(enabled) => {
+                format!(
+                    "{} {}\n  - Enabled: {}",
+                    "Neofetch".blue().bold(),
+                    "(Enable Neofetch on terminal startup)".italic(),
                     enabled.to_string().green()
                 )
             }
@@ -503,6 +513,20 @@ fn enable_tailscale(enabled: bool) -> Result<(), Error> {
         run_command("bash", &["-c", "sudo tailscale up"]).context("Failed to enable Tailscale")?;
         run_command("bash", &["-c", "sudo tailscale ip"])
             .context("Failed to check Tailscale status")?;
+    }
+    Ok(())
+}
+
+fn enable_neofetch(enabled: bool) -> Result<(), Error> {
+    if enabled {
+        run_command(
+            "bash",
+            &[
+                "-c",
+                "grep -q 'neofetch' ~/.bashrc || echo 'neofetch' >> ~/.bashrc",
+            ],
+        )
+        .context("Failed to add neofetch to .bashrc")?;
     }
     Ok(())
 }
