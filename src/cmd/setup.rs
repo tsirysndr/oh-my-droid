@@ -1,7 +1,9 @@
+use std::path::Path;
+
 use anyhow::Error;
 use owo_colors::OwoColorize;
 
-use crate::{config::Configuration, consts::CONFIG_FILE};
+use crate::{config::Configuration, consts::CONFIG_FILE, diff::compare_configurations};
 
 pub fn setup(dry_run: bool, no_confirm: bool) -> Result<(), Error> {
     let mut cfg = Configuration::default();
@@ -11,7 +13,32 @@ pub fn setup(dry_run: bool, no_confirm: bool) -> Result<(), Error> {
         cfg = toml::from_str(&toml_str)?;
     }
 
+    let mut diffs = Vec::new();
+
     if !no_confirm && !dry_run {
+        let home_dir =
+            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Failed to get home directory"))?;
+        diffs = match Path::new(&home_dir).join(".oh-my-droid/lock.toml").exists() {
+            true => {
+                let old_cfg = Configuration::load_lock_file()?;
+                compare_configurations(&old_cfg, &cfg)
+            }
+            false => compare_configurations(&Configuration::empty(), &cfg),
+        };
+
+        if diffs.is_empty() {
+            println!(
+                "{}",
+                "No changes detected. Your environment is already up to date.".green()
+            );
+            return Ok(());
+        }
+
+        println!("The following changes will be made:");
+        for d in diffs.iter().clone() {
+            println!("{}", d);
+        }
+
         match std::path::Path::new(CONFIG_FILE).exists() {
             true => {
                 println!(
@@ -21,7 +48,7 @@ pub fn setup(dry_run: bool, no_confirm: bool) -> Result<(), Error> {
             }
             false => {
                 println!(
-                    "This wil set up your environment with the default configuration.\nDo you want to continue? (y/N)",
+                    "This will set up your environment with the default configuration.\nDo you want to continue? (y/N)",
                 );
             }
         }
@@ -34,7 +61,7 @@ pub fn setup(dry_run: bool, no_confirm: bool) -> Result<(), Error> {
         }
     }
 
-    cfg.setup_environment(dry_run)?;
+    cfg.setup_environment(dry_run, diffs)?;
 
     Ok(())
 }

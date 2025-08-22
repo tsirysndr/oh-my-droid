@@ -1,9 +1,14 @@
 use anyhow::{Context, Error, Result};
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, process::Command};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::Write,
+    process::Command,
+};
 
-use crate::apply::SetupStep;
+use crate::{apply::SetupStep, diff::Diff};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OhMyPosh {
@@ -65,7 +70,25 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn setup_environment(&self, dry_run: bool) -> Result<()> {
+    pub fn empty() -> Self {
+        Self {
+            stow: None,
+            mise: None,
+            nix: None,
+            apt_get: None,
+            pkgx: None,
+            curl: None,
+            blesh: None,
+            oh_my_posh: None,
+            zoxide: None,
+            alias: None,
+            tailscale: None,
+            ssh: None,
+            neofetch: None,
+        }
+    }
+
+    pub fn setup_environment(&self, dry_run: bool, diffs: Vec<Diff>) -> Result<()> {
         let output = Command::new("df")
             .args(&["-BG", "--output=size", "/"])
             .output()
@@ -86,27 +109,7 @@ impl Configuration {
             return Err(Error::msg("Insufficient disk size: >= 7GB required"));
         }
 
-        let steps: Vec<SetupStep> = vec![
-            Some(SetupStep::Paths),
-            self.apt_get.as_deref().map(SetupStep::AptGet),
-            self.curl.as_ref().map(SetupStep::Curl),
-            self.pkgx.as_ref().map(SetupStep::Pkgx),
-            self.mise.as_ref().map(SetupStep::Mise),
-            self.blesh.map(SetupStep::BleSh),
-            self.zoxide.map(SetupStep::Zoxide),
-            self.nix.as_ref().map(SetupStep::Nix),
-            self.stow.as_ref().map(SetupStep::Stow),
-            self.oh_my_posh
-                .as_ref()
-                .map(|omp| SetupStep::OhMyPosh(omp.theme.as_deref().unwrap_or("tokyonight_storm"))),
-            self.alias.as_ref().map(SetupStep::Alias),
-            self.ssh.as_ref().map(SetupStep::Ssh),
-            self.tailscale.map(SetupStep::Tailscale),
-            self.neofetch.map(SetupStep::Neofetch),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
+        let steps = self.diffs_to_setup_steps(diffs);
 
         if dry_run {
             println!("{}", "=== Dry Run: Environment Setup ===".yellow().bold());
@@ -115,18 +118,161 @@ impl Configuration {
                 println!("\n=> Step {}:\n{}", i + 1, step.format_dry_run());
             }
             println!("{}", "=== Dry Run Complete ===".yellow().bold());
-        } else {
-            for step in steps {
-                step.run()?;
-            }
-            println!("{}", "Environment setup completed successfully 🎉".green());
-            println!("You can now open a new terminal to see the changes.");
-            println!(
-                "Or run {} to apply the changes to the current terminal session.",
-                "source ~/.bashrc".green()
-            );
+            return Ok(());
         }
+
+        for step in steps {
+            step.run()?;
+        }
+
+        self.write_lock_file()?;
+
+        println!("{}", "Environment setup completed successfully 🎉".green());
+        println!("You can now open a new terminal to see the changes.");
+        println!(
+            "Or run {} to apply the changes to the current terminal session.",
+            "source ~/.bashrc".green()
+        );
+
         Ok(())
+    }
+
+    pub fn write_lock_file(&self) -> Result<()> {
+        let home_dir = dirs::home_dir().context("Failed to get home directory")?;
+        let config_path = home_dir.join(".oh-my-droid/lock.toml");
+
+        fs::create_dir_all(
+            config_path
+                .parent()
+                .context("Failed to get parent directory of lock file")?,
+        )?;
+
+        let mut file = File::create(&config_path).context("Failed to create lock file")?;
+        file.write_all(
+            toml::to_string(&self)
+                .context("Failed to serialize config")?
+                .as_bytes(),
+        )
+        .context("Failed to write lock file")?;
+
+        Ok(())
+    }
+
+    pub fn load_lock_file() -> Result<Configuration> {
+        let home_dir = dirs::home_dir().context("Failed to get home directory")?;
+        let config_path = home_dir.join(".oh-my-droid/lock.toml");
+
+        let toml_str = fs::read_to_string(&config_path).context("Failed to read lock file")?;
+        let loaded_config: Configuration =
+            toml::from_str(&toml_str).context("Failed to parse lock file")?;
+
+        Ok(loaded_config)
+    }
+
+    pub fn diffs_to_setup_steps<'a>(&'a self, diffs: Vec<Diff>) -> Vec<SetupStep<'a>> {
+        let mut steps = Vec::new();
+
+        steps.push(SetupStep::Paths);
+
+        for diff in diffs {
+            match diff {
+                Diff::Added(parent, _child, _value) => {
+                    self.add_setup_step_for_parent(&mut steps, &parent);
+                }
+                Diff::Changed(parent, _child, _old, _new) => {
+                    self.add_setup_step_for_parent(&mut steps, &parent);
+                }
+                Diff::Nested(parent, nested_diffs) => {
+                    self.add_setup_step_for_parent(&mut steps, &parent);
+                    let nested_steps = self.diffs_to_setup_steps(nested_diffs);
+                    steps.extend(
+                        nested_steps
+                            .into_iter()
+                            .filter(|step| !matches!(step, SetupStep::Paths)),
+                    );
+                }
+                Diff::Removed(_parent, _child, _value) => {
+                    // For removed items, we typically don't need to do anything
+                    // as the setup is additive, but you could add cleanup logic here if needed
+                }
+            }
+        }
+
+        steps.dedup_by(|a, b| std::mem::discriminant(a) == std::mem::discriminant(b));
+
+        steps
+    }
+
+    fn add_setup_step_for_parent<'a>(&'a self, steps: &mut Vec<SetupStep<'a>>, parent: &str) {
+        match parent {
+            "apt-get" => {
+                if let Some(apt_packages) = &self.apt_get {
+                    steps.push(SetupStep::AptGet(apt_packages));
+                }
+            }
+            "pkgx" => {
+                if let Some(pkgx_packages) = &self.pkgx {
+                    steps.push(SetupStep::Pkgx(pkgx_packages));
+                }
+            }
+            "curl" => {
+                if let Some(curl_installers) = &self.curl {
+                    steps.push(SetupStep::Curl(curl_installers));
+                }
+            }
+            "mise" => {
+                if let Some(mise_tools) = &self.mise {
+                    steps.push(SetupStep::Mise(mise_tools));
+                }
+            }
+            "ble.sh" => {
+                if let Some(blesh_enabled) = self.blesh {
+                    steps.push(SetupStep::BleSh(blesh_enabled));
+                }
+            }
+            "nix" => {
+                if let Some(nix_packages) = &self.nix {
+                    steps.push(SetupStep::Nix(nix_packages));
+                }
+            }
+            "stow" => {
+                if let Some(stow_configs) = &self.stow {
+                    steps.push(SetupStep::Stow(stow_configs));
+                }
+            }
+            "oh_my_posh" => {
+                if let Some(oh_my_posh) = &self.oh_my_posh {
+                    let theme = oh_my_posh.theme.as_deref().unwrap_or("tokyonight_storm");
+                    steps.push(SetupStep::OhMyPosh(theme));
+                }
+            }
+            "zoxide" => {
+                if let Some(zoxide_enabled) = self.zoxide {
+                    steps.push(SetupStep::Zoxide(zoxide_enabled));
+                }
+            }
+            "alias" => {
+                if let Some(aliases) = &self.alias {
+                    steps.push(SetupStep::Alias(aliases));
+                }
+            }
+            "ssh" => {
+                if let Some(ssh_config) = &self.ssh {
+                    steps.push(SetupStep::Ssh(ssh_config));
+                }
+            }
+            "tailscale" => {
+                if let Some(tailscale_enabled) = self.tailscale {
+                    steps.push(SetupStep::Tailscale(tailscale_enabled));
+                }
+            }
+            "neofetch" => {
+                if let Some(neofetch_enabled) = self.neofetch {
+                    steps.push(SetupStep::Neofetch(neofetch_enabled));
+                }
+            }
+            _ => {} // Ignore unknown configuration keys
+        }
     }
 }
 
