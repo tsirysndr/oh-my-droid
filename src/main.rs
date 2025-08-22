@@ -1,5 +1,5 @@
 use anyhow::Error;
-use clap::{arg, Command};
+use clap::{Command, arg};
 use owo_colors::OwoColorize;
 
 use crate::{
