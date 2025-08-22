@@ -24,6 +24,7 @@ pub enum SetupStep<'a> {
     Paths,
     Tailscale(bool),
     Neofetch(bool),
+    Doppler(bool),
 }
 
 impl<'a> SetupStep<'a> {
@@ -43,6 +44,7 @@ impl<'a> SetupStep<'a> {
             SetupStep::Paths => setup_paths(),
             SetupStep::Tailscale(enabled) => enable_tailscale(*enabled),
             SetupStep::Neofetch(enabled) => enable_neofetch(*enabled),
+            SetupStep::Doppler(enabled) => enable_doppler(*enabled),
         }
     }
 
@@ -202,6 +204,14 @@ impl<'a> SetupStep<'a> {
                     "{} {}\n  - Enabled: {}",
                     "Neofetch".blue().bold(),
                     "(Enable Neofetch on terminal startup)".italic(),
+                    enabled.to_string().green()
+                )
+            }
+            SetupStep::Doppler(enabled) => {
+                format!(
+                    "{} {}\n  - Enabled: {}",
+                    "Doppler".blue().bold(),
+                    "(Install and configure Doppler for secrets management)".italic(),
                     enabled.to_string().green()
                 )
             }
@@ -533,6 +543,21 @@ fn enable_neofetch(enabled: bool) -> Result<(), Error> {
             ],
         )
         .context("Failed to add neofetch to .bashrc")?;
+    }
+    Ok(())
+}
+
+fn enable_doppler(enabled: bool) -> Result<(), Error> {
+    if enabled {
+        run_command(
+            "bash",
+            &[
+                "-c",
+                "(curl -Ls --tlsv1.2 --proto \"=https\" --retry 3 https://cli.doppler.com/install.sh || wget -t 3 -qO- https://cli.doppler.com/install.sh) | sudo sh",
+            ],
+        )
+        .context("Failed to install Doppler")?;
+        run_command("bash", &["-c", "doppler login"]).context("Failed to log in to Doppler")?;
     }
     Ok(())
 }

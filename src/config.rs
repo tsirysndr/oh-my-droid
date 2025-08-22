@@ -67,6 +67,9 @@ pub struct Configuration {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub neofetch: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doppler: Option<bool>,
 }
 
 impl Configuration {
@@ -85,6 +88,7 @@ impl Configuration {
             tailscale: None,
             ssh: None,
             neofetch: None,
+            doppler: None,
         }
     }
 
@@ -271,6 +275,11 @@ impl Configuration {
                     steps.push(SetupStep::Neofetch(neofetch_enabled));
                 }
             }
+            "doppler" => {
+                if let Some(doppler_enabled) = self.doppler {
+                    steps.push(SetupStep::Doppler(doppler_enabled));
+                }
+            }
             _ => {} // Ignore unknown configuration keys
         }
     }
@@ -341,6 +350,7 @@ impl Default for Configuration {
                 authorized_keys: Some(vec![]),
             }),
             neofetch: Some(true),
+            doppler: Some(false),
         }
     }
 }

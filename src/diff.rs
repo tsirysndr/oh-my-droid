@@ -359,6 +359,7 @@ pub fn compare_configurations(old: &Configuration, new: &Configuration) -> Vec<D
     diffs.extend(compare_bool("zoxide", &old.zoxide, &new.zoxide));
     diffs.extend(compare_bool("tailscale", &old.tailscale, &new.tailscale));
     diffs.extend(compare_bool("neofetch", &old.neofetch, &new.neofetch));
+    diffs.extend(compare_bool("doppler", &old.doppler, &new.doppler));
 
     diffs.extend(compare_oh_my_posh(&old.oh_my_posh, &new.oh_my_posh));
     diffs.extend(compare_ssh_config(&old.ssh, &new.ssh));
