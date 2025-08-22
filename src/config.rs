@@ -12,6 +12,15 @@ pub struct OhMyPosh {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SshConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub port: Option<usize>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorized_keys: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Configuration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stow: Option<HashMap<String, String>>,
@@ -44,6 +53,12 @@ pub struct Configuration {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alias: Option<HashMap<String, String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tailscale: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssh: Option<SshConfig>,
 }
 
 impl Configuration {
@@ -82,7 +97,8 @@ impl Configuration {
                 .as_ref()
                 .map(|omp| SetupStep::OhMyPosh(omp.theme.as_deref().unwrap_or("tokyonight_storm"))),
             self.alias.as_ref().map(SetupStep::Alias),
-            Some(SetupStep::Ssh),
+            self.ssh.as_ref().map(SetupStep::Ssh),
+            self.tailscale.map(SetupStep::Tailscale),
         ]
         .into_iter()
         .flatten()
@@ -169,6 +185,11 @@ impl Default for Configuration {
                 theme: Some("tokyonight_storm".into()),
             }),
             alias: Some(HashMap::from([("ls".into(), "eza -lh".into())])),
+            tailscale: Some(false),
+            ssh: Some(SshConfig {
+                port: Some(8022),
+                authorized_keys: Some(vec![]),
+            }),
         }
     }
 }

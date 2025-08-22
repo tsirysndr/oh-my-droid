@@ -44,6 +44,7 @@ oh-my-droid init
 apt-get = ["build-essential", "curl", "git", "gawk", "wget", "unzip", "autoconf", "automake", "cmake", "tmux", "openssh-server", "openssh-client", "httpie", "code", "screenfetch", "stow"]
 "ble.sh" = true
 zoxide = true
+tailscale = false
 
 [stow]
 git = "github:tsirysndr/android-dotfiles"
@@ -74,6 +75,10 @@ theme = "tokyonight_storm"
 
 [alias]
 ls = "eza -lh"
+
+[ssh]
+port = 8022
+authorized_keys = []
 ```
 
 You can customize it and run `oh-my-droid setup` to apply the changes.
