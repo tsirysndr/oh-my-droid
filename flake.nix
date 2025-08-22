@@ -40,7 +40,7 @@
           inherit src;
 
           pname = "oh-my-droid";
-          version = "0.2.1";
+          version = "0.2.2";
 
           buildInputs = [
             # Add additional build inputs here
