@@ -12,6 +12,7 @@ pub mod cmd;
 pub mod command;
 pub mod config;
 pub mod consts;
+pub mod diff;
 
 fn cli() -> Command {
     let banner = format!(
