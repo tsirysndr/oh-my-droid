@@ -41,7 +41,7 @@ oh-my-droid init
 ```
 
 ```toml
-apt-get = ["build-essential", "curl", "git", "gawk", "wget", "unzip", "autoconf", "automake", "cmake", "tmux", "openssh-server", "openssh-client", "httpie", "code", "screenfetch", "stow"]
+apt-get = ["build-essential", "curl", "git", "gawk", "wget", "unzip", "autoconf", "automake", "cmake", "tmux", "openssh-server", "openssh-client", "httpie", "code", "neofetch", "stow"]
 "ble.sh" = true
 zoxide = true
 tailscale = false
