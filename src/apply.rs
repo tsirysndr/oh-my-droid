@@ -457,6 +457,12 @@ fn setup_paths() -> Result<(), Error> {
     )
     .context("Failed to add ~/.local/bin to PATH in .bashrc")?;
 
+    run_command(
+        "bash",
+        &["-c", "grep -q 'export PATH=\"/nix/var/nix/profiles/default/bin:$PATH\"' ~/.bashrc || echo 'export PATH=\"/nix/var/nix/profiles/default/bin:$PATH\"' >> ~/.bashrc"],
+    )
+    .context("Failed to add /nix/var/nix/profiles/default/bin to PATH in .bashrc")?;
+
     Ok(())
 }
 
