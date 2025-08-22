@@ -1,4 +1,4 @@
-import { dag } from "../../sdk/client.gen.ts";
+import { dag } from "../sdk/client.gen.ts";
 import { buildRustFlags, getDirectory } from "./lib.ts";
 
 export enum Job {
