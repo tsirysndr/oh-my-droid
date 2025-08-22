@@ -205,7 +205,9 @@ fn install_apt(pkgs: &[String]) -> Result<(), Error> {
     }
 
     run_command("sudo", &["apt-get", "update"]).context("Failed to run apt-get update")?;
-    if !Path::new("/etc/apt/sources.list.d/vscode.list").exists() {
+    if !Path::new("/etc/apt/sources.list.d/vscode.list").exists()
+        && !Path::new("/etc/apt/sources.list.d/vscode.sources").exists()
+    {
         run_command("sudo", &["apt-get", "install", "-y", "wget", "curl", "gpg"])?;
         run_command(
             "bash",
