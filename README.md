@@ -81,4 +81,4 @@ port = 8022
 authorized_keys = []
 ```
 
-You can customize it and run `oh-my-droid setup` to apply the changes.
+You can customize it and run `oh-my-droid apply` to apply the changes.
