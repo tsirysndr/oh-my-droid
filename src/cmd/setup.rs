@@ -23,20 +23,20 @@ pub fn setup(dry_run: bool, no_confirm: bool) -> Result<(), Error> {
         false => compare_configurations(&Configuration::empty(), &cfg),
     };
 
+    if diffs.is_empty() {
+        println!(
+            "{}",
+            "No changes detected. Your environment is already up to date.".green()
+        );
+        return Ok(());
+    }
+
+    println!("The following changes will be made:");
+    for d in diffs.iter().clone() {
+        println!("{}", d);
+    }
+
     if !no_confirm && !dry_run {
-        if diffs.is_empty() {
-            println!(
-                "{}",
-                "No changes detected. Your environment is already up to date.".green()
-            );
-            return Ok(());
-        }
-
-        println!("The following changes will be made:");
-        for d in diffs.iter().clone() {
-            println!("{}", d);
-        }
-
         match std::path::Path::new(CONFIG_FILE).exists() {
             true => {
                 println!(
