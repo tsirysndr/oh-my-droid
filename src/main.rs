@@ -43,10 +43,19 @@ fn cli() -> Command {
                 .about("Set up the environment with the default configuration.")
                 .arg(arg!(-d --"dry-run" "Simulate the setup process without making any changes."))
                 .arg(arg!(-y --"yes" "Skip confirmation prompts during setup."))
+                .arg(
+                    arg!([config] "Path to a custom configuration file or a remote git repository e.g., github:tsirysndr/pkgs")
+                        .default_value(CONFIG_FILE),
+                )
                 .alias("apply"),
         )
         .arg(arg!(-d --"dry-run" "Simulate the setup process without making any changes."))
         .arg(arg!(-y --"yes" "Skip confirmation prompts during setup."))
+        .arg(
+            arg!([config] "Path to a custom configuration file or a remote git repository e.g., github:tsirysndr/pkgs")
+                .default_value(CONFIG_FILE),
+        )
+        .after_help("If no subcommand is provided, the 'setup' command will be executed by default.")
 }
 
 fn main() -> Result<(), Error> {
@@ -57,12 +66,14 @@ fn main() -> Result<(), Error> {
         Some(("setup", args)) => {
             let yes = args.get_flag("yes");
             let dry_run = args.get_flag("dry-run");
-            setup(dry_run, yes)?
+            let config = args.get_one::<String>("config").unwrap();
+            setup(dry_run, yes, config)?
         }
         _ => {
             let yes = matches.get_flag("yes");
             let dry_run = matches.get_flag("dry-run");
-            setup(dry_run, yes)?
+            let config = matches.get_one::<String>("config").unwrap();
+            setup(dry_run, yes, config)?
         }
     }
 

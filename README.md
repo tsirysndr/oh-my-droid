@@ -88,6 +88,14 @@ authorized_keys = []
 
 You can customize it and run `oh-my-droid apply` to apply the changes.
 
+## Remote Configuration
+
+You can use a remote configuration file by specifying a git URL:
+
+```bash
+oh-my-droid apply github:tsirysndr/pkgs
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
