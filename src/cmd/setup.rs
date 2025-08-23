@@ -95,7 +95,7 @@ fn parse_config_path(config_path: &str) -> Result<String, Error> {
 
     if config_path.starts_with("tangled:") {
         let repo = &config_path["tangled:".len()..];
-        return Ok(format!("https://tangled.sh/{}.git", repo));
+        return Ok(format!("https://tangled.sh/{}", repo));
     }
 
     Ok(config_path.to_string())
