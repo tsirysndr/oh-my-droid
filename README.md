@@ -36,6 +36,15 @@ Run the following command to install `oh-my-droid`:
 curl -sSfL https://raw.githubusercontent.com/tsirysndr/oh-my-droid/main/install.sh | bash
 ```
 
+## Supported Operating Systems
+
+| OS                         | Status   |
+|----------------------------|----------|
+| Android 15+ Linux Terminal         | ✅ Tested |
+| ChromeOS Linux Terminal (Crostini) | ✅ Tested |
+| Debian Linux                       | ✅ Tested |
+
+
 ## Configuration
 
 Run the following command to create an initial configuration `oh-my-droid.toml`:
