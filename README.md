@@ -40,9 +40,9 @@ curl -sSfL https://raw.githubusercontent.com/tsirysndr/oh-my-droid/main/install.
 
 | OS                         | Status   |
 |----------------------------|----------|
-| Android 15+ Linux Terminal         | ✅ Tested |
-| ChromeOS Linux Terminal (Crostini) | ✅ Tested |
-| Debian Linux                       | ✅ Tested |
+| Android 15+ Linux Terminal         | ✅ |
+| ChromeOS Linux Terminal (Crostini) | ✅ |
+| Debian Linux                       | ✅ |
 
 
 ## Configuration
