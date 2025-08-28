@@ -14,6 +14,7 @@ Turn a fresh Android 15+ Linux Terminal into a fully-configured, beautiful, and 
 - [ble.sh](https://github.com/akinomyoga/ble.sh) integration for a better terminal experience
 - [Pkgx](https://github.com/pkgxdev/pkgx) package manager for easy software installation
 - [Mise](https://github.com/jdx/mise) integration for a modern command-line experience
+- [Npm](https://www.npmjs.com/) integration for managing Node.js global packages
 - [Stow](https://www.gnu.org/software/stow) integration for managing dotfiles
 - [Nix](https://github.com/NixOS/nix) package manager
 - SSH support for secure remote access
@@ -38,11 +39,11 @@ curl -sSfL https://raw.githubusercontent.com/tsirysndr/oh-my-droid/main/install.
 
 ## Supported Operating Systems
 
-| OS                         | Status   |
-|----------------------------|----------|
-| Android 15+ Linux Terminal         | ✅ |
-| ChromeOS Linux Terminal (Crostini) | ✅ |
-| Debian Linux                       | ✅ |
+| OS                                 | Status   |
+|------------------------------------|----------|
+| Android 15+ Linux Terminal         | ✅       |
+| ChromeOS Linux Terminal (Crostini) | ✅       |
+| Debian Linux                       | ✅       |
 
 
 ## Configuration

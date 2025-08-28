@@ -25,6 +25,7 @@ pub enum SetupStep<'a> {
     Tailscale(bool),
     Neofetch(bool),
     Doppler(bool),
+    Npm(&'a HashMap<String, String>),
 }
 
 impl<'a> SetupStep<'a> {
@@ -45,6 +46,7 @@ impl<'a> SetupStep<'a> {
             SetupStep::Tailscale(enabled) => enable_tailscale(*enabled),
             SetupStep::Neofetch(enabled) => enable_neofetch(*enabled),
             SetupStep::Doppler(enabled) => enable_doppler(*enabled),
+            SetupStep::Npm(map) => setup_npm(map),
         }
     }
 
@@ -213,6 +215,19 @@ impl<'a> SetupStep<'a> {
                     "Doppler".blue().bold(),
                     "(Install and configure Doppler for secrets management)".italic(),
                     enabled.to_string().green()
+                )
+            }
+            SetupStep::Npm(map) => {
+                let npm_list = map
+                    .iter()
+                    .map(|(k, v)| format!("  - {}: {}", k.green(), v.cyan()))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                format!(
+                    "{} {}\n{}",
+                    "Npm".blue().bold(),
+                    "(Install global npm packages)".italic(),
+                    npm_list
                 )
             }
         }
@@ -558,6 +573,19 @@ fn enable_doppler(enabled: bool) -> Result<(), Error> {
         )
         .context("Failed to install Doppler")?;
         run_command("bash", &["-c", "doppler login"]).context("Failed to log in to Doppler")?;
+    }
+    Ok(())
+}
+
+fn setup_npm(map: &HashMap<String, String>) -> Result<(), Error> {
+    for (package, version) in map {
+        run_command(
+            "bash",
+            &[
+                "-c",
+                &format!("source ~/.bashrc && npm install -g {}@{}", package, version),
+            ],
+        )?;
     }
     Ok(())
 }
