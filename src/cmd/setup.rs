@@ -54,6 +54,8 @@ pub fn setup(dry_run: bool, no_confirm: bool, config_path: &str) -> Result<(), E
         return Ok(());
     }
 
+    cfg.validate()?;
+
     println!("The following changes will be made:");
     for d in diffs.iter().clone() {
         println!("{}", d);

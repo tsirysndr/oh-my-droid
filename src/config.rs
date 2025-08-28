@@ -70,6 +70,9 @@ pub struct Configuration {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doppler: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub npm: Option<HashMap<String, String>>,
 }
 
 impl Configuration {
@@ -89,7 +92,31 @@ impl Configuration {
             ssh: None,
             neofetch: None,
             doppler: None,
+            npm: None,
         }
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if self.npm.is_some() {
+            let has_node_via_mise = self
+                .mise
+                .as_ref()
+                .map(|mise| mise.contains_key("node"))
+                .unwrap_or(false);
+
+            let has_node_via_pkgx = self
+                .pkgx
+                .as_ref()
+                .map(|pkgx| pkgx.contains_key("node") || pkgx.contains_key("nodejs.org"))
+                .unwrap_or(false);
+
+            if !has_node_via_mise && !has_node_via_pkgx {
+                return Err(Error::msg(
+                    "npm packages specified but node is not configured. Please add node to either mise or pkgx configuration.",
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub fn setup_environment(&self, dry_run: bool, diffs: Vec<Diff>) -> Result<()> {
@@ -280,6 +307,11 @@ impl Configuration {
                     steps.push(SetupStep::Doppler(doppler_enabled));
                 }
             }
+            "npm" => {
+                if let Some(npm_packages) = &self.npm {
+                    steps.push(SetupStep::Npm(npm_packages));
+                }
+            }
             _ => {} // Ignore unknown configuration keys
         }
     }
@@ -351,6 +383,7 @@ impl Default for Configuration {
             }),
             neofetch: Some(true),
             doppler: Some(false),
+            npm: None,
         }
     }
 }

@@ -352,6 +352,7 @@ pub fn compare_configurations(old: &Configuration, new: &Configuration) -> Vec<D
     diffs.extend(compare_hashmap("pkgx", &old.pkgx, &new.pkgx));
     diffs.extend(compare_hashmap("curl", &old.curl, &new.curl));
     diffs.extend(compare_hashmap("alias", &old.alias, &new.alias));
+    diffs.extend(compare_hashmap("npm", &old.npm, &new.npm));
 
     diffs.extend(compare_vec("apt-get", &old.apt_get, &new.apt_get));
 
