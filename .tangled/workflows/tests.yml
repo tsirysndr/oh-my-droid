@@ -9,6 +9,7 @@ dependencies:
     - cargo
     - rustc
     - rustfmt
+    - gcc
 
 steps:
   - name: "cargo fmt"
