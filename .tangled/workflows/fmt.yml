@@ -14,3 +14,6 @@ steps:
   - name: "cargo fmt"
     command: |
        cargo fmt --all --check
+  - name: "cargo test"
+    command: |
+       cargo test --all --release

@@ -155,3 +155,64 @@ fn extract_repo_name(url: &str) -> Option<String> {
 
     Some(format!("{}-{}", username, repo))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_repo_name() {
+        let url = "https://github.com/tsirysndr/pkgs.git";
+        let expected = Some("tsirysndr-pkgs".into());
+        let result = extract_repo_name(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_repo_name_no_git() {
+        let url = "https://github.com/tsirysndr/pkgs";
+        let expected = Some("tsirysndr-pkgs".into());
+        let result = extract_repo_name(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_repo_name_invalid_url() {
+        let url = "invalid-url";
+        let expected = None;
+        let result = extract_repo_name(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_config_path_github() {
+        let path = "github:tsirysndr/pkgs";
+        let expected = Some("https://github.com/tsirysndr/pkgs.git".into());
+        let result = parse_config_path(path).ok();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_config_path_tangled() {
+        let path = "tangled:@tsirysandratraina/pkgs";
+        let expected = Some("https://tangled.sh/@tsirysandratraina/pkgs".into());
+        let result = parse_config_path(path).ok();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_config_path_git_url() {
+        let path = "https://github.com/tsirysndr/pkgs.git";
+        let expected = Some("https://github.com/tsirysndr/pkgs.git".into());
+        let result = parse_config_path(path).ok();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_config_path() {
+        let path = "/custom/path/to/oh-my-droid.toml";
+        let expected = Some("/custom/path/to/oh-my-droid.toml".into());
+        let result = parse_config_path(path).ok();
+        assert_eq!(result, expected);
+    }
+}
