@@ -2,18 +2,25 @@ use std::{fs, path::Path};
 
 use anyhow::{Context, Error};
 use owo_colors::OwoColorize;
-use url::Url;
 
 use crate::{
-    command::run_command, config::Configuration, consts::CONFIG_FILE, diff::compare_configurations,
+    command::run_command,
+    config::Configuration,
+    consts::CONFIG_FILE,
+    diff::compare_configurations,
+    git::{extract_repo_name, extract_version},
 };
 
 pub fn setup(dry_run: bool, no_confirm: bool, config_path: &str) -> Result<(), Error> {
     let mut cfg = Configuration::default();
 
     let repo_url = parse_config_path(config_path)?;
+    let (repo_url, version) = match repo_url.starts_with("https://") {
+        true => extract_version(&repo_url),
+        false => (repo_url, None),
+    };
 
-    let toml_config = match clone_repo(&repo_url) {
+    let toml_config = match clone_repo(&repo_url, version) {
         Ok(toml_config) => toml_config,
         Err(err) => {
             if !repo_url.starts_with("https://") {
@@ -92,7 +99,7 @@ pub fn setup(dry_run: bool, no_confirm: bool, config_path: &str) -> Result<(), E
 fn parse_config_path(config_path: &str) -> Result<String, Error> {
     if config_path.starts_with("github:") {
         let repo = &config_path["github:".len()..];
-        return Ok(format!("https://github.com/{}.git", repo));
+        return Ok(format!("https://github.com/{}", repo));
     }
 
     if config_path.starts_with("tangled:") {
@@ -103,7 +110,7 @@ fn parse_config_path(config_path: &str) -> Result<String, Error> {
     Ok(config_path.to_string())
 }
 
-fn clone_repo(repo_url: &str) -> Result<String, Error> {
+fn clone_repo(repo_url: &str, version: Option<String>) -> Result<String, Error> {
     if !repo_url.starts_with("https://") {
         return Err(anyhow::anyhow!(
             "Unsupported repository URL. Only HTTPS URLs are supported."
@@ -127,11 +134,21 @@ fn clone_repo(repo_url: &str) -> Result<String, Error> {
             run_command("git", &["-C", dest.to_str().unwrap(), "pull"])?;
         }
         false => {
-            run_command(
-                "git",
-                &["clone", "--depth", "1", repo_url, dest.to_str().unwrap()],
-            )?;
+            run_command("git", &["clone", repo_url, dest.to_str().unwrap()])?;
         }
+    }
+
+    if version.is_some() {
+        run_command("git", &["-C", dest.to_str().unwrap(), "fetch", "--all"])?;
+        run_command(
+            "git",
+            &[
+                "-C",
+                dest.to_str().unwrap(),
+                "checkout",
+                version.as_ref().unwrap(),
+            ],
+        )?;
     }
 
     if !dest.join("oh-my-droid.toml").exists() {
@@ -143,51 +160,16 @@ fn clone_repo(repo_url: &str) -> Result<String, Error> {
     Ok(dest.join("oh-my-droid.toml").to_str().unwrap().to_string())
 }
 
-fn extract_repo_name(url: &str) -> Option<String> {
-    let parsed = Url::parse(url).ok()?;
-    let mut segments = parsed.path_segments()?;
-    let username = segments.next()?;
-    let mut repo = segments.next()?;
-
-    if let Some(stripped) = repo.strip_suffix(".git") {
-        repo = stripped;
-    }
-
-    Some(format!("{}-{}", username, repo))
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::git::extract_version;
+
     use super::*;
-
-    #[test]
-    fn test_extract_repo_name() {
-        let url = "https://github.com/tsirysndr/pkgs.git";
-        let expected = Some("tsirysndr-pkgs".into());
-        let result = extract_repo_name(url);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_extract_repo_name_no_git() {
-        let url = "https://github.com/tsirysndr/pkgs";
-        let expected = Some("tsirysndr-pkgs".into());
-        let result = extract_repo_name(url);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_extract_repo_name_invalid_url() {
-        let url = "invalid-url";
-        let expected = None;
-        let result = extract_repo_name(url);
-        assert_eq!(result, expected);
-    }
 
     #[test]
     fn test_parse_config_path_github() {
         let path = "github:tsirysndr/pkgs";
-        let expected = Some("https://github.com/tsirysndr/pkgs.git".into());
+        let expected = Some("https://github.com/tsirysndr/pkgs".into());
         let result = parse_config_path(path).ok();
         assert_eq!(result, expected);
     }
@@ -202,8 +184,54 @@ mod tests {
 
     #[test]
     fn test_parse_config_path_git_url() {
-        let path = "https://github.com/tsirysndr/pkgs.git";
-        let expected = Some("https://github.com/tsirysndr/pkgs.git".into());
+        let path = "https://github.com/tsirysndr/pkgs@main";
+        let expected = Some("https://github.com/tsirysndr/pkgs@main".into());
+        let result = parse_config_path(path).ok();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_version() {
+        let url = "https://tangled.sh/@tsirysandratraina/pkgs@main";
+        let expected = (
+            "https://tangled.sh/@tsirysandratraina/pkgs".into(),
+            Some("main".into()),
+        );
+        let result = extract_version(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_version_2() {
+        let url = "https://tangled.sh/@tsirysandratraina/pkgs";
+        let expected = ("https://tangled.sh/@tsirysandratraina/pkgs".into(), None);
+        let result = extract_version(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_version_3() {
+        let url = "https://github.com/tsirysndr/pkgs";
+        let expected = ("https://github.com/tsirysndr/pkgs".into(), None);
+        let result = extract_version(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_version_4() {
+        let url = "https://github.com/tsirysndr/pkgs@main";
+        let expected = (
+            "https://github.com/tsirysndr/pkgs".into(),
+            Some("main".into()),
+        );
+        let result = extract_version(url);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_config_path_github_with_branch() {
+        let path = "github:tsirysndr/pkgs@main";
+        let expected = Some("https://github.com/tsirysndr/pkgs@main".into());
         let result = parse_config_path(path).ok();
         assert_eq!(result, expected);
     }
