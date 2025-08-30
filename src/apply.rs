@@ -6,6 +6,7 @@ use owo_colors::OwoColorize;
 use crate::{
     command::{run_command, run_command_without_local_path},
     config::SshConfig,
+    git::extract_version,
 };
 
 #[derive(Debug)]
@@ -419,12 +420,25 @@ fn setup_stow(map: &HashMap<String, String>) -> Result<(), Error> {
         repo.to_string()
     };
 
+    let (repo, version) = extract_version(&repo);
+
     let home = dirs::home_dir().ok_or_else(|| Error::msg("Failed to get home directory"))?;
 
     if !Path::new(&home.join(".dotfiles")).exists() {
         run_command("bash", &["-c", &format!("git clone {} ~/.dotfiles", repo)])
             .context("Failed to clone dotfiles repository")?;
     } else {
+        run_command("bash", &["-c", "git -C ~/.dotfiles pull"])
+            .context("Failed to update dotfiles repository")?;
+    }
+
+    if let Some(version) = version {
+        run_command("bash", &["-c", "git -C ~/.dotfiles fetch --all"])?;
+        run_command(
+            "bash",
+            &["-c", &format!("git -C ~/.dotfiles checkout {}", version)],
+        )
+        .context("Failed to checkout dotfiles version")?;
         run_command("bash", &["-c", "git -C ~/.dotfiles pull"])
             .context("Failed to update dotfiles repository")?;
     }

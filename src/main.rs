@@ -1,5 +1,5 @@
 use anyhow::Error;
-use clap::{Command, arg};
+use clap::{arg, Command};
 use owo_colors::OwoColorize;
 
 use crate::{
@@ -13,6 +13,7 @@ pub mod command;
 pub mod config;
 pub mod consts;
 pub mod diff;
+pub mod git;
 
 fn cli() -> Command {
     let banner = format!(
