@@ -103,7 +103,7 @@ You can customize it and run `oh-my-droid apply` to apply the changes.
 You can use a remote configuration file by specifying a git URL:
 
 ```bash
-oh-my-droid apply github:tsirysndr/pkgs
+oh-my-droid apply github:tsirysndr/pkgs@main
 ```
 
 ## License
