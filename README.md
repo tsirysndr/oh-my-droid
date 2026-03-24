@@ -3,6 +3,10 @@
 
 Turn a fresh Android 15+ Linux Terminal into a fully-configured, beautiful, and modern web development system by running a single command.
 
+
+<a href="https://pocketenv.io/new?repo=tangled:tsiry-sandratraina.com/oh-my-droid" target="_blank"><img src="https://pocketenv.io/open-in-pocketenv.svg" alt="Open in Pocketenv" /></a>
+
+
 ![Preview](./terminal.png)
 
 ## Features
